@@ -24,7 +24,7 @@ class _ImageSquareState extends State<ImageSquare> {
   @override
   void didUpdateWidget(covariant ImageSquare oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Reset the one-time error reporting when a NEW url is shown
+
     if (oldWidget.imageUrl != widget.imageUrl) {
       _reportedError = false;
     }
@@ -34,7 +34,6 @@ class _ImageSquareState extends State<ImageSquare> {
     if (_reportedError) return;
     _reportedError = true;
 
-    // Call after frame to avoid setState during build warnings
     if (widget.onImageError != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         widget.onImageError?.call();
@@ -47,27 +46,23 @@ class _ImageSquareState extends State<ImageSquare> {
     return AspectRatio(
       aspectRatio: 1,
       child: Stack(
-        fit: StackFit.expand,
-        children: [
+          fit: StackFit.expand,
+          children: [
           CachedNetworkImage(
-            imageUrl: widget.imageUrl,
-            fit: BoxFit.cover,
-            fadeInDuration: const Duration(milliseconds: 250),
+          imageUrl: widget.imageUrl,
+          fit: BoxFit.cover,
+          fadeInDuration: const Duration(milliseconds: 500),
+          fadeOutDuration: const Duration(milliseconds: 500),
+          fadeInCurve: Curves.easeInOut,
+          fadeOutCurve: Curves.easeInOut,
             placeholder: (_, __) => const LoadingOverlay(),
             errorWidget: (_, __, ___) {
-              _reportErrorOnce();
-              return const Center(
-                child: Icon(Icons.broken_image, size: 40),
-              );
-            },
-          ),
-          if (widget.isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.2),
-              child: const LoadingOverlay(),
-            ),
-        ],
-      ),
+    _reportErrorOnce();
+    return const Center(child: Icon(Icons.broken_image, size: 40));
+    },
+    ),
+    ],
+    ),
     );
   }
 }

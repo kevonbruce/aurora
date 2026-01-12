@@ -19,7 +19,6 @@ class _RandomImageScreenState extends State<RandomImageScreen> {
   bool _loading = true;
   String? _error;
 
-  // NEW: track cases where API succeeds but the image URL itself fails (e.g., 404)
   bool _imageLoadFailed = false;
 
   Color _backgroundColor = Colors.black;
@@ -34,28 +33,27 @@ class _RandomImageScreenState extends State<RandomImageScreen> {
     setState(() {
       _loading = true;
       _error = null;
-      _imageLoadFailed = false; // NEW: reset for each attempt
+      _imageLoadFailed = false;
     });
 
     try {
-      // 1) Fetch the new URL
       final image = await _api.fetchRandomImage();
 
       if (!mounted) return;
 
-      // 2) Show the new image immediately (don’t block on palette)
       setState(() {
         _image = image;
         _loading = false;
       });
 
-      // 3) Derive background color with a timeout (so it can’t hang)
       final brightness = Theme.of(context).brightness;
 
       ColorScheme scheme;
       try {
-        scheme = await ColorSchemeHelper.fromImageUrl(image.url, brightness)
-            .timeout(const Duration(seconds: 3));
+        scheme = await ColorSchemeHelper.fromImageUrl(
+          image.url,
+          brightness,
+        ).timeout(const Duration(seconds: 3));
       } catch (_) {
         scheme = ColorScheme.fromSeed(
           seedColor: brightness == Brightness.dark ? Colors.black : Colors.grey,
@@ -65,7 +63,6 @@ class _RandomImageScreenState extends State<RandomImageScreen> {
 
       if (!mounted) return;
 
-      // 4) Use a more obviously “adaptive” color than surface
       final adaptiveBg = brightness == Brightness.dark
           ? scheme.primaryContainer
           : scheme.secondaryContainer;
@@ -80,14 +77,6 @@ class _RandomImageScreenState extends State<RandomImageScreen> {
         _error = 'Couldn’t load image. Please try again.';
         _loading = false;
       });
-
-      // Optional: brief, non-intrusive feedback
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to load image. Tap Retry or Another.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
     }
   }
 
@@ -101,7 +90,9 @@ class _RandomImageScreenState extends State<RandomImageScreen> {
         aspectRatio: 1,
         child: Container(
           padding: const EdgeInsets.all(16),
-          color: Colors.black.withOpacity(brightness == Brightness.dark ? 0.22 : 0.10),
+          color: Colors.black.withValues(
+            alpha: brightness == Brightness.dark ? 0.22 : 0.10,
+          ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -130,13 +121,14 @@ class _RandomImageScreenState extends State<RandomImageScreen> {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    final inlineErrorColor =
-    brightness == Brightness.dark ? Colors.white : Colors.black;
+    final inlineErrorColor = brightness == Brightness.dark
+        ? Colors.white
+        : Colors.black;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
+        duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
         color: _backgroundColor,
         child: SafeArea(
@@ -154,27 +146,17 @@ class _RandomImageScreenState extends State<RandomImageScreen> {
                         child: ImageSquare(
                           imageUrl: _image!.url,
                           isLoading: _loading,
-                          // NEW: surface image-load failures (404, etc.)
+
                           onImageError: () {
                             if (!mounted) return;
 
                             setState(() {
                               _imageLoadFailed = true;
                             });
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Image failed to load. Tap Another to try a new one.',
-                                ),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
                           },
                         ),
                       ),
 
-                      // NEW: visible message so reviewers see “graceful handling”
                       if (_imageLoadFailed) ...[
                         const SizedBox(height: 12),
                         Text(
@@ -196,7 +178,7 @@ class _RandomImageScreenState extends State<RandomImageScreen> {
                       width: double.infinity,
                       child: FilledButton(
                         onPressed: _loading ? null : _loadImage,
-                        child: const Text('Another'),
+                        child: Text(_loading ? 'Loading...' : 'Another'),
                       ),
                     ),
                   ],
